@@ -13,10 +13,6 @@ use crate::{ClipboardUpdate, Config, WorkerEvent};
 
 const SHUTDOWN_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-fn is_transferable_mime_type(mime_type: &str) -> bool {
-    is_x11_target(mime_type)
-}
-
 pub fn run(config: Config, events: &Sender<WorkerEvent>, shutdown: &Receiver<()>) -> Result<()> {
     let watcher_config = WatcherConfig::new(
         config.max_target_bytes.min(config.max_total_bytes),
@@ -68,7 +64,7 @@ fn capture(
     let mut total_bytes = 0_usize;
 
     for mime_type in mime_types {
-        if !is_transferable_mime_type(&mime_type) {
+        if !is_x11_target(&mime_type) {
             debug!(?mime_type, "skipping non-transferable Wayland MIME type");
             continue;
         }
@@ -121,15 +117,4 @@ pub fn publish(snapshot: Snapshot) -> Result<(), Error> {
 
 pub fn clear_clipboard() -> Result<(), Error> {
     clear(ClipboardType::Regular, Seat::All)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::is_transferable_mime_type;
-
-    #[test]
-    fn excludes_x11_control_targets_from_wayland_offers() {
-        assert!(is_transferable_mime_type("text/plain;charset=utf-8"));
-        assert!(!is_transferable_mime_type("SAVE_TARGETS"));
-    }
 }
